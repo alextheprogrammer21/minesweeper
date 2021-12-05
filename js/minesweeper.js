@@ -48,15 +48,15 @@ function buildGrid() {
 
 function createTile(x,y, isMine) {
     var tile = document.createElement("div");
-    tile.classList.add(`x:${x},y:${y}`);
+    tile.classList.add(`x:${x},y:${y}!`);
     tile.classList.add("tile");
     tile.classList.add("hidden");
     isMine ? tile.setAttribute("isMine",true) : tile.setAttribute("isMine",false)
 
     tile.addEventListener("auxclick", function(e) { e.preventDefault(); }); // Middle Click
     tile.addEventListener("contextmenu", function(e) { e.preventDefault(); }); // Right Click
-    tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
-
+    // tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
+    tile.addEventListener("mouseup", handleTileClick ); // All Clicks
     return tile;
 }
 
@@ -76,22 +76,48 @@ function smileyUp() {
     smiley.classList.remove("face_down");
 }
 
-function handleTileClick(event,x,y) {
-    let leftTop = document.getElementsByClassName("x:1,y:1")
-    // var boardElement = document.getElementById('minefield')
-    let test = document.getElementsByClassName("x:1,y:1");
-
-
-    console.log(x)
+function getCoordinates(tile) {
+    let tileClass = tile.className;
+    let findx = true;
+    let findy = false;
+    let nums = false;
+    let x = "";
+    let y = "";
+    for (let i = 0; i < tileClass.length; i++) {
+        let char = tileClass[i];
+        if (char === '!') break;
+        if (nums && findx) x+=char;
+        if (nums && findy) y+=char;
+        if (char === ':') nums = true;
+        if (char === ',') {
+            nums = false; 
+            findx = false;
+            findy = true;
+        }
+    }
+    return {x,y}
+}
+function handleTileClick(event) {
 
     const tile = event.target;
+    const {x,y} = getCoordinates(tile);
+
+    let leftTop = document.getElementsByClassName(`x:${x-1},y:${y-1}`);
+    let middleTop = document.getElementsByClassName(`x:${x},y:${y-1}`);
+    let rightTop = document.getElementsByClassName(`x:${x+1},y:${y-1}`);
+    let leftCenter = document.getElementsByClassName(`x:${x-1},y:${y}`);
+    let rightCenter = document.getElementsByClassName(`x:${x+1},y:${y}`);
+    let leftBottom = document.getElementsByClassName(`x:${x-1},y:${y+1}`);
+    let middleBottom = document.getElementsByClassName(`x:${x},y:${y+1}`);
+    let rightBottom = document.getElementsByClassName(`x:${x+1},y:${y+1}`);
+
     // Left Click
     if (event.which === 1) {
 
        if (!tile.classList.contains("flag")) {
         tile.classList.remove("hidden");
         tile.classList.add("tile_1");
-        tile.removeEventListener("mouseup", );
+        tile.removeEventListener("mouseup", handleTileClick);
        }
     }
     // Middle Click
@@ -145,4 +171,7 @@ first click
 Loop through X values, then loop through Y values searching for where the X and y elements are the ones you want. Then 
 reveal them. This is not ideal. 
 A better way would be if you could do an O(1) get by className
+
+
+Now you need to generate mines recursively after the player does his first click
 */
