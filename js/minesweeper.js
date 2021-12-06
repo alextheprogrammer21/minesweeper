@@ -1,6 +1,8 @@
 
 var time = 0;
-var difficulty;
+var difficulty = 0;
+var minesGenerated = false;
+var mineCounter = 10;
 function buildGrid() {
 
     // Fetch grid and clear out old elements.
@@ -9,7 +11,6 @@ function buildGrid() {
     
     var columns = 9;
     var rows = 9;   
-    var mineCounter = 10; 
 
     if (difficulty === 1) {
         columns = 16;
@@ -27,12 +28,8 @@ function buildGrid() {
     // Build DOM Grid
     var tile;
     for (var y = 0; y < rows; y++) {
-        for (var x = 0; x < columns; x++) {
-            let isMine = Math.round(Math.random());
-            if(isMine) mineCounter--;
-            if (mineCounter < 1) isMine = 0;
-            
-            tile = createTile(x,y, isMine);
+        for (var x = 0; x < columns; x++) {            
+            tile = createTile(x,y);
             grid.appendChild(tile);
         }
     }
@@ -46,17 +43,16 @@ function buildGrid() {
     grid.style.height = (rows * height) + "px";
 }
 
-function createTile(x,y, isMine) {
+function createTile(x,y) {
     var tile = document.createElement("div");
     tile.classList.add(`x:${x},y:${y}!`);
     tile.classList.add("tile");
     tile.classList.add("hidden");
-    isMine ? tile.setAttribute("isMine",true) : tile.setAttribute("isMine",false)
 
     tile.addEventListener("auxclick", function(e) { e.preventDefault(); }); // Middle Click
     tile.addEventListener("contextmenu", function(e) { e.preventDefault(); }); // Right Click
-    // tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
-    tile.addEventListener("mouseup", handleTileClick ); // All Clicks
+    tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
+    // tile.addEventListener("mouseup", handleTileClick ); // All Clicks
     return tile;
 }
 
@@ -95,30 +91,83 @@ function getCoordinates(tile) {
             findy = true;
         }
     }
-    return {x,y}
+    return [x,y]
 }
-function handleTileClick(event) {
 
+function generateMines() {
+    let col;
+    let row;
+
+    if (mineCounter === 10) [col, row] = [9, 9];
+    if (mineCounter === 40) [col, row] = [16, 16];
+    if (mineCounter === 99) [col, row] = [30, 16];
+    
+    x = Math.floor(Math.random() * col);
+    y = Math.floor(Math.random() * row);
+    if (document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.contains("isMine") || document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.contains("freeSpace")) {
+        return generateMines();
+    }
+    return [x,y];
+}
+
+function adjacentTiles(x,y) {
+    x = Number.parseInt(x);
+    y = Number.parseInt(y);
+    let adjtiles = [];
+    if (document.getElementsByClassName(`x:${x-1},y:${y-1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x-1},y:${y-1}!`)[0]);
+    if (document.getElementsByClassName(`x:${x},y:${y-1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x},y:${y-1}!`)[0]);
+    if (document.getElementsByClassName(`x:${x+1},y:${y-1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x+1},y:${y-1}!`)[0]);
+    if (document.getElementsByClassName(`x:${x-1},y:${y}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x-1},y:${y}!`)[0]);
+    if (document.getElementsByClassName(`x:${x+1},y:${y}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x+1},y:${y}!`)[0]);
+    if (document.getElementsByClassName(`x:${x-1},y:${y+1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x-1},y:${y+1}!`)[0]);
+    if (document.getElementsByClassName(`x:${x},y:${y+1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x},y:${y+1}!`)[0]);
+    if (document.getElementsByClassName(`x:${x+1},y:${y+1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x+1},y:${y+1}!`)[0]);
+
+    return adjtiles;
+}
+
+function revealTile(tile,x,y) {
+    // let [x,y] = getCoordinates(tile);
+    let count = 0;
+    let adjtiles = adjacentTiles(x,y);
+
+    //Make it so that once you click on a tile, it will get the count of bombs next to it, then recursively 
+    // reveal all adjacent tiles if there is no bomb, then continue to reveal adjacent tiles to the ones that have no bombs 
+    // around it
+    if (!tile.classList.contains("flag")) { 
+        for (let i = 0; i < adjtiles.length; i++) {
+            if(adjtiles[i].classList.contains("isMine")) count++;
+        }
+        tile.classList.remove("hidden");
+        tile.classList.contains("isMine") ? tile.classList.add(`mine_hit`) : tile.classList.add(`tile_${count}`)
+        tile.removeEventListener("mouseup", handleTileClick);
+
+        if (!count) {
+            adjtiles.forEach(tile => {
+                revealTile(tile);
+            })
+        }
+       }
+}
+function handleTileClick(event,x,y) {
     const tile = event.target;
-    const {x,y} = getCoordinates(tile);
-
-    let leftTop = document.getElementsByClassName(`x:${x-1},y:${y-1}`);
-    let middleTop = document.getElementsByClassName(`x:${x},y:${y-1}`);
-    let rightTop = document.getElementsByClassName(`x:${x+1},y:${y-1}`);
-    let leftCenter = document.getElementsByClassName(`x:${x-1},y:${y}`);
-    let rightCenter = document.getElementsByClassName(`x:${x+1},y:${y}`);
-    let leftBottom = document.getElementsByClassName(`x:${x-1},y:${y+1}`);
-    let middleBottom = document.getElementsByClassName(`x:${x},y:${y+1}`);
-    let rightBottom = document.getElementsByClassName(`x:${x+1},y:${y+1}`);
 
     // Left Click
     if (event.which === 1) {
-
-       if (!tile.classList.contains("flag")) {
-        tile.classList.remove("hidden");
-        tile.classList.add("tile_1");
-        tile.removeEventListener("mouseup", handleTileClick);
-       }
+        // let [x,y] = getCoordinates(tile);
+        const adjtiles = adjacentTiles(x,y);
+        if (!minesGenerated) {
+            for (let i = 0; i < adjtiles.length; i++) {
+                adjtiles[i].classList.add("freeSpace");
+            }
+            tile.classList.add("freeSpace");
+            for (let i = 0; i < mineCounter; i++) {
+                const [x1,y1] = generateMines();
+                document.getElementsByClassName(`x:${x1},y:${y1}!`)[0].classList.add("isMine");
+            }
+            minesGenerated = true;
+        }    
+        revealTile(tile),x,y;
     }
     // Middle Click
     else if (event.which === 2) {
@@ -140,7 +189,6 @@ function handleTileClick(event) {
 function setDifficulty() {
     var difficultySelector = document.getElementById("difficulty");
     difficulty = difficultySelector.selectedIndex;
-    //TODO implement me
 }
 
 function startTimer() {
@@ -173,5 +221,9 @@ reveal them. This is not ideal.
 A better way would be if you could do an O(1) get by className
 
 
-Now you need to generate mines recursively after the player does his first click
+Make sure everything works if you restart by clicking middle smiley. (Needs to generate new mines);
 */
+
+
+// Remove the getCoordinates function and instead use closures to pass the x,y. Somehow figure out how you can 
+// remove the event listener. 
