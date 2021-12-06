@@ -51,8 +51,8 @@ function createTile(x,y) {
 
     tile.addEventListener("auxclick", function(e) { e.preventDefault(); }); // Middle Click
     tile.addEventListener("contextmenu", function(e) { e.preventDefault(); }); // Right Click
-    tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
-    // tile.addEventListener("mouseup", handleTileClick ); // All Clicks
+    // tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
+    tile.addEventListener("mouseup", handleTileClick ); // All Clicks
     return tile;
 }
 
@@ -114,22 +114,32 @@ function adjacentTiles(x,y) {
     x = Number.parseInt(x);
     y = Number.parseInt(y);
     let adjtiles = [];
-    if (document.getElementsByClassName(`x:${x-1},y:${y-1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x-1},y:${y-1}!`)[0]);
-    if (document.getElementsByClassName(`x:${x},y:${y-1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x},y:${y-1}!`)[0]);
-    if (document.getElementsByClassName(`x:${x+1},y:${y-1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x+1},y:${y-1}!`)[0]);
-    if (document.getElementsByClassName(`x:${x-1},y:${y}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x-1},y:${y}!`)[0]);
-    if (document.getElementsByClassName(`x:${x+1},y:${y}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x+1},y:${y}!`)[0]);
-    if (document.getElementsByClassName(`x:${x-1},y:${y+1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x-1},y:${y+1}!`)[0]);
-    if (document.getElementsByClassName(`x:${x},y:${y+1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x},y:${y+1}!`)[0]);
-    if (document.getElementsByClassName(`x:${x+1},y:${y+1}!`)[0]) adjtiles.push(document.getElementsByClassName(`x:${x+1},y:${y+1}!`)[0]);
+
+    leftTop = document.getElementsByClassName(`x:${x-1},y:${y-1}!`)[0];
+    midTop = document.getElementsByClassName(`x:${x},y:${y-1}!`)[0];
+    rightTop = document.getElementsByClassName(`x:${x+1},y:${y-1}!`)[0];
+    leftMid = document.getElementsByClassName(`x:${x-1},y:${y}!`)[0];
+    rightMid = document.getElementsByClassName(`x:${x+1},y:${y}!`)[0];
+    leftBottom = document.getElementsByClassName(`x:${x-1},y:${y+1}!`)[0];
+    midBottom = document.getElementsByClassName(`x:${x},y:${y+1}!`)[0];
+    rightBottom = document.getElementsByClassName(`x:${x+1},y:${y+1}!`)[0];
+
+    if (leftTop && leftTop.classList.contains("hidden")) adjtiles.push(leftTop);
+    if (midTop && midTop.classList.contains("hidden")) adjtiles.push(midTop);
+    if (rightTop && rightTop.classList.contains("hidden")) adjtiles.push(rightTop);
+    if (leftMid && leftMid.classList.contains("hidden")) adjtiles.push(leftMid);
+    if (rightMid && rightMid.classList.contains("hidden")) adjtiles.push(rightMid);
+    if (leftBottom && leftBottom.classList.contains("hidden")) adjtiles.push(leftBottom);
+    if (midBottom && midBottom.classList.contains("hidden")) adjtiles.push(midBottom);
+    if (rightBottom && rightBottom.classList.contains("hidden")) adjtiles.push(rightBottom);
 
     return adjtiles;
 }
 
-function revealTile(tile,x,y) {
-    // let [x,y] = getCoordinates(tile);
+function revealTile(tile) {
+    let [x,y] = getCoordinates(tile);
     let count = 0;
-    let adjtiles = adjacentTiles(x,y);
+    const adjtiles = adjacentTiles(x,y);
 
     //Make it so that once you click on a tile, it will get the count of bombs next to it, then recursively 
     // reveal all adjacent tiles if there is no bomb, then continue to reveal adjacent tiles to the ones that have no bombs 
@@ -141,20 +151,23 @@ function revealTile(tile,x,y) {
         tile.classList.remove("hidden");
         tile.classList.contains("isMine") ? tile.classList.add(`mine_hit`) : tile.classList.add(`tile_${count}`)
         tile.removeEventListener("mouseup", handleTileClick);
-
+        
         if (!count) {
             adjtiles.forEach(tile => {
                 revealTile(tile);
             })
         }
+        
        }
 }
-function handleTileClick(event,x,y) {
+function handleTileClick(event) {
     const tile = event.target;
+
+
 
     // Left Click
     if (event.which === 1) {
-        // let [x,y] = getCoordinates(tile);
+        let [x,y] = getCoordinates(tile);
         const adjtiles = adjacentTiles(x,y);
         if (!minesGenerated) {
             for (let i = 0; i < adjtiles.length; i++) {
@@ -167,7 +180,9 @@ function handleTileClick(event,x,y) {
             }
             minesGenerated = true;
         }    
-        revealTile(tile),x,y;
+        revealTile(tile);
+
+
     }
     // Middle Click
     else if (event.which === 2) {
@@ -226,4 +241,4 @@ Make sure everything works if you restart by clicking middle smiley. (Needs to g
 
 
 // Remove the getCoordinates function and instead use closures to pass the x,y. Somehow figure out how you can 
-// remove the event listener. 
+// remove the event listener.
