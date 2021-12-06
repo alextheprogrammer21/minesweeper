@@ -63,15 +63,17 @@ function startGame() {
     updateRemainingMines(0);
     }
 
-function smileyDown() {
+function smileyDown(param) {
     var smiley = document.getElementById("smiley");
-    smiley.classList.add("face_down");
+    smiley.classList.add(`face_${param}`);
 }
 
-function smileyUp() {
+function smileyUp(param) {
     var smiley = document.getElementById("smiley");
-    smiley.classList.remove("face_down");
+    smiley.classList.remove(`face_${param}`);
 }
+
+
 
 function getCoordinates(tile) {
     let tileClass = tile.className;

@@ -28,8 +28,8 @@
             <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span>
         </div>
         
-        <div id="smiley" class="smiley" onmousedown="smileyDown();" onmouseup="smileyUp();" onclick="startGame();"></div>
+        <div id="smiley" class="smiley" onmousedown="smileyDown(`down`);" onmouseup="smileyUp(`down`);" onclick="startGame();"></div>
         
-        <div id="minefield"></div>
+        <div id="minefield" onmousedown="smileyDown(`limbo`);" onmouseup="smileyUp(`limbo`);"></div>
     </body>
 </html>
