@@ -3,6 +3,7 @@ var time = 0;
 var difficulty = 0;
 var minesGenerated = false;
 var mineCounter = 10;
+
 function buildGrid() {
 
     // Fetch grid and clear out old elements.
@@ -21,10 +22,9 @@ function buildGrid() {
     if (difficulty === 2) {
         var columns = 30;
         var rows = 16;   
-        mineCounter = 99; 
+        mineCounter = 99;
     }
 
-    //Randomly create mines. Set counter to 10, and subtract 
     // Build DOM Grid
     var tile;
     for (var y = 0; y < rows; y++) {
@@ -60,6 +60,7 @@ function startGame() {
 
     buildGrid();
     startTimer();
+    updateRemainingMines(0);
     }
 
 function smileyDown() {
@@ -150,25 +151,25 @@ function revealTile(tile) {
         }
         tile.classList.remove("hidden");
         tile.classList.contains("isMine") ? tile.classList.add(`mine_hit`) : tile.classList.add(`tile_${count}`)
-        tile.removeEventListener("mouseup", handleTileClick);
+        // tile.removeEventListener("mouseup", handleTileClick);
         
-        if (!count) {
+        if (!count) { // Recursively reveal tiles if there's no mines around it
             adjtiles.forEach(tile => {
                 revealTile(tile);
             })
         }
-        
        }
 }
 function handleTileClick(event) {
     const tile = event.target;
+    let [x,y] = getCoordinates(tile);
+    const adjtiles = adjacentTiles(x,y);
 
 
 
     // Left Click
-    if (event.which === 1) {
-        let [x,y] = getCoordinates(tile);
-        const adjtiles = adjacentTiles(x,y);
+    if (event.which === 1 && tile.classList.contains("hidden")) {
+
         if (!minesGenerated) {
             for (let i = 0; i < adjtiles.length; i++) {
                 adjtiles[i].classList.add("freeSpace");
@@ -180,23 +181,44 @@ function handleTileClick(event) {
             }
             minesGenerated = true;
         }    
-        revealTile(tile);
+        revealTile(tile, false);
 
 
     }
     // Middle Click
-    else if (event.which === 2) {
-        //TODO try to reveal adjacent tiles
+    else if (event.which === 2 && !tile.classList.contains("hidden")) {
+        //Check how many flags are around the tile and make sure it's the same as the tile number, then reveal adjacent tiles
+        // but not recursively?? Just reveal those specific tiles I think
+        let tileClass = tile.className;
+        let num = null;
+        let flagCount = 0;
+        for (let i = 0; i < tileClass.length; i++) {
+            if (tileClass[i] === "_") {
+                num = tileClass[i+1];
+            }
+        }
+        adjtiles.forEach(tile => {
+            if (tile.classList.contains("flag")) {
+                flagCount++
+            }
+        })
+        console.log(flagCount,Number.parseInt(num))
+        if (flagCount === Number.parseInt(num)) {
+        adjtiles.forEach(tile => {
+            revealTile(tile);
+        })
     }
+        }
     // Right Click
-    else if (event.which === 3) {
+    else if (event.which === 3 && tile.classList.contains("hidden"))
+    {
         
-        if (tile.classList.contains("hidden")) {
-            tile.classList.remove("hidden");
+        if (!tile.classList.contains("flag")) {
             tile.classList.add("flag");
+            updateRemainingMines(-1);
         } else {
             tile.classList.remove("flag");
-            tile.classList.add("hidden");
+            updateRemainingMines(+1);
         }
     }
 }
@@ -219,22 +241,11 @@ function onTimerTick() {
 function updateTimer() {
     document.getElementById("timer").innerHTML = timeValue;
 }
-
+function updateRemainingMines(change) {
+    mineCounter+=change;
+    document.getElementById("flagCount").innerHTML = mineCounter;
+}
 /*
-Set a function to generate 10 fields to randomly be mines (recursively to prevent duplicates) isMine:true, false
-When someone clicks a tile, a count on the tiles around is done to display the number of mines around it
-or if it is a mine
-
-Right now mines are mostly true in the first few squres, which you don't want. You want more true randomness 
-
-Get mines a different way that uses recursion and doesn't make the first click a mine. Have a generateMine function on 
-first click
-
-
-Loop through X values, then loop through Y values searching for where the X and y elements are the ones you want. Then 
-reveal them. This is not ideal. 
-A better way would be if you could do an O(1) get by className
-
 
 Make sure everything works if you restart by clicking middle smiley. (Needs to generate new mines);
 */
@@ -242,3 +253,5 @@ Make sure everything works if you restart by clicking middle smiley. (Needs to g
 
 // Remove the getCoordinates function and instead use closures to pass the x,y. Somehow figure out how you can 
 // remove the event listener.
+
+// If you hit a bomb, end the game
