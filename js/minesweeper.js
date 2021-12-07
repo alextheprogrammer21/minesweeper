@@ -1,35 +1,20 @@
-var difficulty = 0;
-var minesGenerated = false;
+var time = 0;
 var mineCounter = 10;
 var minesDisplayed = 10;
 var unrevealedTiles = 81;
-function buildGrid() {
 
+function buildGrid() {
     // Fetch grid and clear out old elements.
     var grid = document.getElementById("minefield");
     grid.innerHTML = "";
     
-    var columns = 9;
-    var rows = 9;   
-
-    if (difficulty === 1) {
-        columns = 16;
-        rows = 16;    
-        mineCounter = 40;
-        minesDisplayed = 40;
-        unrevealedTiles = 256;
-    }
-
-    if (difficulty === 2) {
-        var columns = 30;
-        var rows = 16;   
-        mineCounter = 99;
-        minesDisplayed = 99;
-        unrevealedTiles = 480;
-    }
+    var [columns, rows] = [9,9];
+    if (setDifficulty() === 1) [columns, rows, mineCounter, minesDisplayed, unrevealedTiles] = [16, 16, 40, 40, 256];
+    if (setDifficulty() === 2) [columns, rows, mineCounter, minesDisplayed, unrevealedTiles] = [30, 16, 99, 99, 480];  
 
     // Build DOM Grid
     var tile;
+
     for (var y = 0; y < rows; y++) {
         for (var x = 0; x < columns; x++) {            
             tile = createTile(x,y);
@@ -46,21 +31,7 @@ function buildGrid() {
     grid.style.height = (rows * height) + "px";
 }
 
-function createTile(x,y) {
-    var tile = document.createElement("div");
-    tile.classList.add(`x:${x},y:${y}!`);
-    tile.classList.add("tile");
-    tile.classList.add("hidden");
-
-    tile.addEventListener("auxclick", function(e) { e.preventDefault(); }); // Middle Click
-    tile.addEventListener("contextmenu", function(e) { e.preventDefault(); }); // Right Click
-    tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
-    // tile.addEventListener("mouseup", handleTileClick ); // All Clicks
-    return tile;
-}
-
 function startGame() {
-
     buildGrid();
     startTimer();
     updateRemainingMines(0);
@@ -78,11 +49,8 @@ function smileyUp(param) {
 
 function getCoordinates(tile) {
     let tileClass = tile.className;
-    let findx = true;
-    let findy = false;
-    let nums = false;
-    let x = "";
-    let y = "";
+    let [findx, findy, nums, x, y] = [true, false, false, "", ""];
+ 
     for (let i = 0; i < tileClass.length; i++) {
         let char = tileClass[i];
         if (char === '!') break;
@@ -90,34 +58,48 @@ function getCoordinates(tile) {
         if (nums && findy) y+=char;
         if (char === ':') nums = true;
         if (char === ',') {
-            nums = false; 
-            findx = false;
-            findy = true;
+            [nums, findx, findy] = [false, false, true];
         }
     }
-    return [x,y]
+    return [x,y];
+}
+
+function createTile(x,y) {
+    var tile = document.createElement("div");
+    tile.classList.add(`x:${x},y:${y}!`);
+    tile.classList.add("tile");
+    tile.classList.add("hidden");
+
+    tile.addEventListener("auxclick", function(e) { e.preventDefault(); }); // Middle Click
+    tile.addEventListener("contextmenu", function(e) { e.preventDefault(); }); // Right Click
+    tile.addEventListener("mouseup", handleTileClick ); // All Clicks
+
+    return tile;
 }
 
 function generateMines() {
-    let col;
-    let row;
+    let [col, row] = [0,0];
 
     if (mineCounter === 10) [col, row] = [9, 9];
     if (mineCounter === 40) [col, row] = [16, 16];
     if (mineCounter === 99) [col, row] = [30, 16];
     
-    x = Math.floor(Math.random() * col);
-    y = Math.floor(Math.random() * row);
-    if (document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.contains("isMine") || document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.contains("freeSpace")) {
-        return generateMines();
+
+    for (let i = 0; i < mineCounter; i++) {
+        let x = Math.floor(Math.random() * col);
+        let y = Math.floor(Math.random() * row);
+    
+        if (document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.contains("isMine") || document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.contains("freeSpace")) {
+            i--;
+        } else {
+            document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.add("isMine");
+        }
     }
-    return [x,y];
 }
 
 function adjacentTiles(x,y) {
-    x = Number.parseInt(x);
-    y = Number.parseInt(y);
-    let adjtiles = [];
+    [x,y] = [Number.parseInt(x), Number.parseInt(y)];
+    adjtiles = [];
 
     leftTop = document.getElementsByClassName(`x:${x-1},y:${y-1}!`)[0];
     midTop = document.getElementsByClassName(`x:${x},y:${y-1}!`)[0];
@@ -143,65 +125,49 @@ function adjacentTiles(x,y) {
 function revealTile(tile) {
     let [x,y] = getCoordinates(tile);
     let count = 0;
-    const adjtiles = adjacentTiles(x,y);
+    let adjtiles = adjacentTiles(x,y);
 
     if (!tile.classList.contains("flag") && tile.classList.contains("hidden")) { 
-
         for (let i = 0; i < adjtiles.length; i++) {
             if(adjtiles[i].classList.contains("isMine")) count++;
         }
         tile.classList.remove("hidden");
         unrevealedTiles--;
-        console.log(unrevealedTiles);
         if (tile.classList.contains("isMine")) {
             tile.classList.add(`mine_hit`);
             return gameOver("lose");
         } else {
                 tile.classList.add(`tile_${count}`)
-                if (unrevealedTiles-mineCounter === 0) {
-                    return gameOver("win");
-                } 
-            } 
-        // tile.removeEventListener("mouseup", handleTileClick);
-        
+                if (unrevealedTiles-mineCounter === 0) return gameOver("win");    
+               }         
         if (!count) { // Recursively reveal tiles if there's no mines around it
             adjtiles.forEach(tile => {
                 revealTile(tile);
             })
         }
-       }
+    }
 }
 
-function handleTileClick(event, x,y) {
+function handleTileClick(event) {
+
     const tile = event.target;
-    // let [x,y] = getCoordinates(tile);
+    let [x,y] = getCoordinates(tile);
     const adjtiles = adjacentTiles(x,y);
-
-
-
     // Left Click
     if (event.which === 1 && tile.classList.contains("hidden")) {
-
-        if (!minesGenerated) {
+        if (!document.getElementsByClassName(`x:${0},y:${0}!`)[0].classList.contains("generated")) {
             for (let i = 0; i < adjtiles.length; i++) {
                 adjtiles[i].classList.add("freeSpace");
             }
             tile.classList.add("freeSpace");
-            for (let i = 0; i < mineCounter; i++) {
-                const [x1,y1] = generateMines();
-                document.getElementsByClassName(`x:${x1},y:${y1}!`)[0].classList.add("isMine");
-            }
-            minesGenerated = true;
+            generateMines();
+            document.getElementsByClassName(`x:${0},y:${0}!`)[0].classList.add('generated');
         }    
         revealTile(tile);
-
-
     }
     // Middle Click
     else if (event.which === 2 && !tile.classList.contains("hidden")) {
-        let tileClass = tile.className;
-        let num = null;
-        let flagCount = 0;
+        let [tileClass, num, flagCount] = [tile.className, null, 0];
         for (let i = 0; i < tileClass.length; i++) {
             if (tileClass[i] === "_") {
                 num = tileClass[i+1];
@@ -215,13 +181,11 @@ function handleTileClick(event, x,y) {
         if (flagCount === Number.parseInt(num)) {
         adjtiles.forEach(tile => {
             revealTile(tile);
-        })
-    }
+            })
         }
+    }
     // Right Click
-    else if (event.which === 3 && tile.classList.contains("hidden"))
-    {
-        
+    else if (event.which === 3 && tile.classList.contains("hidden")) {
         if (!tile.classList.contains("flag")) {
             tile.classList.add("flag");
             updateRemainingMines(-1);
@@ -231,22 +195,19 @@ function handleTileClick(event, x,y) {
         }
     }
 }
-
 function setDifficulty() {
     var difficultySelector = document.getElementById("difficulty");
-    difficulty = difficultySelector.selectedIndex;
+    var difficulty = difficultySelector.selectedIndex;
+    return difficulty;
 }
-
 function startTimer() {
     timeValue = 0;
     intervalId = window.setInterval(onTimerTick, 1000);
 }
-
 function onTimerTick() {
     timeValue++;
      updateTimer();
 }
-
 function updateTimer() {
     document.getElementById("timer").innerHTML = timeValue;
 }
@@ -268,8 +229,6 @@ function gameOver(result) {
     }
 }
 /*
-Important: Switch to closures to pass x,y and remove getcoordinates
 Make sure everything works if you restart by clicking middle smiley. (Needs to generate new mines and reset everything);
 Make sure you're unable to click or do anything except middle smiley when game is over.
-Clean everything up and remove any duplicate functions
 */
