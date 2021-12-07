@@ -1,9 +1,8 @@
-
-var time = 0;
 var difficulty = 0;
 var minesGenerated = false;
 var mineCounter = 10;
-
+var minesDisplayed = 10;
+var unrevealedTiles = 81;
 function buildGrid() {
 
     // Fetch grid and clear out old elements.
@@ -17,12 +16,16 @@ function buildGrid() {
         columns = 16;
         rows = 16;    
         mineCounter = 40;
+        minesDisplayed = 40;
+        unrevealedTiles = 256;
     }
 
     if (difficulty === 2) {
         var columns = 30;
         var rows = 16;   
         mineCounter = 99;
+        minesDisplayed = 99;
+        unrevealedTiles = 480;
     }
 
     // Build DOM Grid
@@ -51,8 +54,8 @@ function createTile(x,y) {
 
     tile.addEventListener("auxclick", function(e) { e.preventDefault(); }); // Middle Click
     tile.addEventListener("contextmenu", function(e) { e.preventDefault(); }); // Right Click
-    // tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
-    tile.addEventListener("mouseup", handleTileClick ); // All Clicks
+    tile.addEventListener("mouseup", (event) => handleTileClick(event,x, y) ); // All Clicks
+    // tile.addEventListener("mouseup", handleTileClick ); // All Clicks
     return tile;
 }
 
@@ -72,8 +75,6 @@ function smileyUp(param) {
     var smiley = document.getElementById("smiley");
     smiley.classList.remove(`face_${param}`);
 }
-
-
 
 function getCoordinates(tile) {
     let tileClass = tile.className;
@@ -144,15 +145,23 @@ function revealTile(tile) {
     let count = 0;
     const adjtiles = adjacentTiles(x,y);
 
-    //Make it so that once you click on a tile, it will get the count of bombs next to it, then recursively 
-    // reveal all adjacent tiles if there is no bomb, then continue to reveal adjacent tiles to the ones that have no bombs 
-    // around it
-    if (!tile.classList.contains("flag")) { 
+    if (!tile.classList.contains("flag") && tile.classList.contains("hidden")) { 
+
         for (let i = 0; i < adjtiles.length; i++) {
             if(adjtiles[i].classList.contains("isMine")) count++;
         }
         tile.classList.remove("hidden");
-        tile.classList.contains("isMine") ? tile.classList.add(`mine_hit`) : tile.classList.add(`tile_${count}`)
+        unrevealedTiles--;
+        console.log(unrevealedTiles);
+        if (tile.classList.contains("isMine")) {
+            tile.classList.add(`mine_hit`);
+            return gameOver("lose");
+        } else {
+                tile.classList.add(`tile_${count}`)
+                if (unrevealedTiles-mineCounter === 0) {
+                    return gameOver("win");
+                } 
+            } 
         // tile.removeEventListener("mouseup", handleTileClick);
         
         if (!count) { // Recursively reveal tiles if there's no mines around it
@@ -162,9 +171,10 @@ function revealTile(tile) {
         }
        }
 }
-function handleTileClick(event) {
+
+function handleTileClick(event, x,y) {
     const tile = event.target;
-    let [x,y] = getCoordinates(tile);
+    // let [x,y] = getCoordinates(tile);
     const adjtiles = adjacentTiles(x,y);
 
 
@@ -183,14 +193,12 @@ function handleTileClick(event) {
             }
             minesGenerated = true;
         }    
-        revealTile(tile, false);
+        revealTile(tile);
 
 
     }
     // Middle Click
     else if (event.which === 2 && !tile.classList.contains("hidden")) {
-        //Check how many flags are around the tile and make sure it's the same as the tile number, then reveal adjacent tiles
-        // but not recursively?? Just reveal those specific tiles I think
         let tileClass = tile.className;
         let num = null;
         let flagCount = 0;
@@ -204,7 +212,6 @@ function handleTileClick(event) {
                 flagCount++
             }
         })
-        console.log(flagCount,Number.parseInt(num))
         if (flagCount === Number.parseInt(num)) {
         adjtiles.forEach(tile => {
             revealTile(tile);
@@ -232,28 +239,37 @@ function setDifficulty() {
 
 function startTimer() {
     timeValue = 0;
-    window.setInterval(onTimerTick, 1000);
+    intervalId = window.setInterval(onTimerTick, 1000);
 }
 
 function onTimerTick() {
     timeValue++;
-    updateTimer();
+     updateTimer();
 }
 
 function updateTimer() {
     document.getElementById("timer").innerHTML = timeValue;
 }
 function updateRemainingMines(change) {
-    mineCounter+=change;
-    document.getElementById("flagCount").innerHTML = mineCounter;
+    minesDisplayed+=change;
+    document.getElementById("flagCount").innerHTML = minesDisplayed;
+}
+function gameOver(result) {
+    window.clearInterval(intervalId);  
+    intervalId = null;
+    var smiley = document.getElementById("smiley");
+    smiley.classList.add(`face_${result}`);
+    if (result === "lose") {
+        document.getElementById("result").innerHTML = "Game over. You've lost.";
+    }
+    if (result === "win") {
+        const score = document.getElementById('timer').innerHTML;
+        document.getElementById("result").innerHTML = `GG you've won. Your score is: ${score}`;
+    }
 }
 /*
-
-Make sure everything works if you restart by clicking middle smiley. (Needs to generate new mines);
+Important: Switch to closures to pass x,y and remove getcoordinates
+Make sure everything works if you restart by clicking middle smiley. (Needs to generate new mines and reset everything);
+Make sure you're unable to click or do anything except middle smiley when game is over.
+Clean everything up and remove any duplicate functions
 */
-
-
-// Remove the getCoordinates function and instead use closures to pass the x,y. Somehow figure out how you can 
-// remove the event listener.
-
-// If you hit a bomb, end the game
