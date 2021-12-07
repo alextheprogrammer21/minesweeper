@@ -8,7 +8,8 @@ function buildGrid() {
     var grid = document.getElementById("minefield");
     grid.innerHTML = "";
     
-    var [columns, rows] = [9,9];
+    var [columns, rows] = [0,0];
+    if (setDifficulty() === 0) [columns, rows, mineCounter, minesDisplayed, unrevealedTiles] = [9, 9, 10, 10, 81];
     if (setDifficulty() === 1) [columns, rows, mineCounter, minesDisplayed, unrevealedTiles] = [16, 16, 40, 40, 256];
     if (setDifficulty() === 2) [columns, rows, mineCounter, minesDisplayed, unrevealedTiles] = [30, 16, 99, 99, 480];  
 
@@ -32,6 +33,7 @@ function buildGrid() {
 }
 
 function startGame() {
+    reset();
     buildGrid();
     startTimer();
     updateRemainingMines(0);
@@ -84,11 +86,10 @@ function generateMines() {
     if (mineCounter === 40) [col, row] = [16, 16];
     if (mineCounter === 99) [col, row] = [30, 16];
     
-
     for (let i = 0; i < mineCounter; i++) {
         let x = Math.floor(Math.random() * col);
         let y = Math.floor(Math.random() * row);
-    
+
         if (document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.contains("isMine") || document.getElementsByClassName(`x:${x},y:${y}!`)[0].classList.contains("freeSpace")) {
             i--;
         } else {
@@ -134,6 +135,7 @@ function revealTile(tile) {
         tile.classList.remove("hidden");
         unrevealedTiles--;
         if (tile.classList.contains("isMine")) {
+            unrevealedTiles++;
             tile.classList.add(`mine_hit`);
             return gameOver("lose");
         } else {
@@ -202,6 +204,7 @@ function setDifficulty() {
 }
 function startTimer() {
     timeValue = 0;
+    time++;
     intervalId = window.setInterval(onTimerTick, 1000);
 }
 function onTimerTick() {
@@ -215,7 +218,20 @@ function updateRemainingMines(change) {
     minesDisplayed+=change;
     document.getElementById("flagCount").innerHTML = minesDisplayed;
 }
+function reset() {
+    document.getElementById("result").innerHTML = ""; 
+    document.getElementById("minefield").style.pointerEvents = "all";  
+    var smiley = document.getElementById("smiley");
+    if (smiley.classList.contains('face_lose')) smiley.classList.remove('face_lose');
+    if (smiley.classList.contains('face_win')) smiley.classList.remove('face_win');
+    if (time > 0) {
+    window.clearInterval(intervalId);  
+    intervalId = null;
+    time = 0;
+    }
+}
 function gameOver(result) {
+    document.getElementById("minefield").style.pointerEvents = "none";
     window.clearInterval(intervalId);  
     intervalId = null;
     var smiley = document.getElementById("smiley");
@@ -228,7 +244,3 @@ function gameOver(result) {
         document.getElementById("result").innerHTML = `GG you've won. Your score is: ${score}`;
     }
 }
-/*
-Make sure everything works if you restart by clicking middle smiley. (Needs to generate new mines and reset everything);
-Make sure you're unable to click or do anything except middle smiley when game is over.
-*/
